@@ -9,6 +9,13 @@ const mysql = require('mysql2/promise');
     connectionLimit: 10,
     queueLimit: 0
 });*/
+console.log('DB Config:', {
+    host: process.env.MYSQLHOST,
+    user: process.env.MYSQLUSER,
+    port: process.env.MYSQLPORT,
+    database: process.env.MYSQLDATABASE,
+    hasPassword: !!process.env.MYSQLPASSWORD
+});
 const pool = mysql.createPool({
     host: process.env.MYSQLHOST,
     user: process.env.MYSQLUSER,
