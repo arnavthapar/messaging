@@ -218,6 +218,12 @@ document.getElementById('messages').addEventListener('click', async (e) => {
         await loadMessages();
     }
 });
+document.getElementById('groupButtonGo').addEventListener('click', () => {
+    location.href = '/group';
+});
+document.getElementById('settingsButtonGo').addEventListener('click', () => {
+    location.href = '/settings';
+});
 document.getElementById('messageForm').onsubmit = async (e) => {
     e.preventDefault();
     const submitter = e.submitter;

@@ -33,7 +33,9 @@ document.getElementById('deleteGroupForm').onsubmit = async (e) => {
         }
     }
 }
-
+document.getElementById('backButton').addEventListener('click', () => {
+    location.href = '/home';
+});
 groupId = new URLSearchParams(window.location.search).get('sender');
 document.getElementById('addForm').onsubmit = async (e) => {
     e.preventDefault();

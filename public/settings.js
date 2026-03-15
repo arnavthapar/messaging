@@ -28,6 +28,9 @@ document.getElementById('deleteForm').onsubmit = async (e) => {
         }
     }
 }
+document.getElementById('backButton').addEventListener('click', () => {
+    location.href = '/home';
+});
 document.getElementById('timeFormat').onclick = async (e) => {
     e.preventDefault();
     const res = await fetch('/api/change_time_format', {
