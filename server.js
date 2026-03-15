@@ -40,7 +40,15 @@ let sessions = {};
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+        }
+    }
+}));
 const limiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
     max: 10, // 10 attempts per window
