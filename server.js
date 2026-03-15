@@ -6,7 +6,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const app = express();
 app.set('trust proxy', 1);
-app.use(cors({origin:'http://localhost:8080'}));
+app.use(cors({origin:'https://messaging-production-8499.up.railway.app/'}));
 const PORT = 8080;
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
@@ -39,7 +39,8 @@ function notifyUser(userId, data) {
 let sessions = {};
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
-
+const helmet = require('helmet');
+app.use(helmet());
 const limiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
     max: 10, // 10 attempts per window
@@ -392,7 +393,12 @@ app.post('/api/send_message', sendLimiter, authMiddleware, async (req, res) => {
         } else if (content.length === 0) {
             return res.status(400).json({ message: 'Message cannot be empty.' });
         }
-
+        if (!Number.isInteger(Number(req.userId))) {
+            return res.status(400).json({ message: 'Invalid ID.' });
+        }
+        if (!Number.isInteger(Number(group))) {
+            return res.status(400).json({ message: 'Invalid ID.' });
+        }
         if (group) {
             const [membership] = await pool.query(
                 'SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?',
@@ -446,6 +452,9 @@ app.post('/api/delete_message', authMiddleware, async (req, res) => {
     try {
         const id = req.body.id;
         const userId = req.userId;
+        if (!Number.isInteger(Number(id))) {
+            return res.status(400).json({ message: 'Invalid ID.' });
+        }
         if (req.body.dm) {
             const [dmRows] = await pool.query('SELECT sender, reciever FROM dms WHERE id = ?', [id]);
             if (dmRows.length > 0) {
@@ -600,7 +609,7 @@ app.post('/api/login', limiter, async (req, res) => {
         res.cookie('user', sessionId, {
             httpOnly: true,
             signed: true,
-            secure: false,
+            secure: true,
             sameSite: 'lax',
             maxAge: 86400000,
         });
