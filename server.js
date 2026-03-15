@@ -647,32 +647,20 @@ app.get('/api/stream', authMiddleware, (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders()
+    res.flushHeaders();
 
     const userId = req.userId;
-
-    // Add this client to the map
-    if (!clients.has(userId)) {
-        clients.set(userId, new Set());
-        subscriber.subscribe(`messages:${userId}`, (message) => {
-            const userClients = clients.get(userId);
-            if (userClients) {
-                for (const clientRes of userClients) {
-                    clientRes.write(`data: ${message}\n\n`);
-                }
-            }
-        });
-    }
+    if (!clients.has(userId)) clients.set(userId, new Set());
     clients.get(userId).add(res);
 
+    const keepalive = setInterval(() => res.write(': keepalive\n\n'), 30000);
+
     req.on('close', () => {
+        clearInterval(keepalive);
         const userClients = clients.get(userId);
         if (userClients) {
             userClients.delete(res);
-            if (userClients.size === 0) {
-                clients.delete(userId);
-                subscriber.unsubscribe(`messages:${userId}`);
-            }
+            if (userClients.size === 0) clients.delete(userId);
         }
     });
 });
