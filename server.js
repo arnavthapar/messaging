@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors({origin:'http://localhost:8080'}));
 const PORT = 8080;
 const bcrypt = require('bcrypt');
