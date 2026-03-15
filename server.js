@@ -20,13 +20,22 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser([process.env.COOKIE_CODE]));
-const { createClient } = require('redis');
+/*const { createClient } = require('redis');
 const redis = createClient({url:process.env.REDIS_URL});
 redis.connect();
 const subscriber = redis.duplicate();
-subscriber.connect();
-let sessions = {};
+subscriber.connect();*/
 const clients = new Map();
+
+function notifyUser(userId, data) {
+    const userClients = clients.get(userId);
+    if (userClients) {
+        for (const res of userClients) {
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        }
+    }
+}
+let sessions = {};
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 
@@ -397,8 +406,10 @@ app.post('/api/send_message', sendLimiter, authMiddleware, async (req, res) => {
             );
             const [groupMembers] = await pool.query('SELECT user_id FROM group_members WHERE group_id = ?', [group]);
             for (const member of groupMembers) {
-                await redis.publish(`messages:${member.user_id}`, JSON.stringify({ content, sender: req.username }));
+                //await redis.publish(`messages:${member.user_id}`, JSON.stringify({ content, sender: req.username }));
+                notifyUser(member.user_id, { content, sender: req.username });
             }
+
             return res.json({ success: true });
         }
 
@@ -418,10 +429,12 @@ app.post('/api/send_message', sendLimiter, authMiddleware, async (req, res) => {
             [req.userId, recipientId, content]
         );
         res.json({ success: true });
-        await redis.publish(`messages:${recipientId}`, JSON.stringify({
-            content,
-            sender: req.username,
-        }));
+        notifyUser(recipientId, { content, sender: req.username });
+        notifyUser(req.userId, { content, sender: req.username });
+        //await redis.publish(`messages:${recipientId}`, JSON.stringify({
+        //    content,
+        //    sender: req.username,
+        //}));
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Internal server error' });
@@ -439,7 +452,8 @@ app.post('/api/delete_message', authMiddleware, async (req, res) => {
                     return res.status(403).json({ message: 'You cannot delete this message.' });
                 }
                 await pool.query('DELETE FROM dms WHERE id = ? AND sender = ?', [id, userId]);
-                await redis.publish(`messages:${dmRows[0].reciever}`, JSON.stringify({ deleted: true }));
+                notifyUser(dmRows[0].reciever, { deleted: true });
+                //await redis.publish(`messages:${dmRows[0].reciever}`, JSON.stringify({ deleted: true }));
                 return res.json({ success: true });
             }
 
@@ -452,7 +466,8 @@ app.post('/api/delete_message', authMiddleware, async (req, res) => {
                 await pool.query('DELETE FROM group_messages WHERE id = ? AND sender = ?', [id, userId]);
                 const [groupMembers] = await pool.query('SELECT user_id FROM group_members WHERE group_id = ?', [groupRows[0].group_id]);
                 for (const member of groupMembers) {
-                    await redis.publish(`messages:${member.user_id}`, JSON.stringify({ deleted: true }));
+                    notifyUser(member.user_id, { deleted: true });
+                    //await redis.publish(`messages:${member.user_id}`, JSON.stringify({ deleted: true }));
                 }
                 return res.json({ success: true });
             }
