@@ -224,6 +224,9 @@ document.getElementById('groupButtonGo').addEventListener('click', () => {
 document.getElementById('settingsButtonGo').addEventListener('click', () => {
     location.href = '/settings';
 });
+document.getElementById('backButton').addEventListener('click', () => {
+    location.href = '/home';
+});
 document.getElementById('messageForm').onsubmit = async (e) => {
     e.preventDefault();
     const submitter = e.submitter;
