@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser([process.env.COOKIE_CODE]));
 const { createClient } = require('redis');
-const redis = createClient({url:"redis://127.0.0.1:6379"});
+const redis = createClient({url:process.env.REDIS_URL});
 redis.connect();
 const subscriber = redis.duplicate();
 subscriber.connect();
