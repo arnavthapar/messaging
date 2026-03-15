@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, must-revalidate"/>
+<meta name="author" content="me">
+<meta name="description" content="talk">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<noscript>You need to enable Javasript for this website to work. Who has that turned off?</noscript>
+<!--<link rel="icon" type="image/x-icon" href="images/favicon.ico">!-->
+<title>message</title>
+</head>
+<body>
+<div class="container">
+    <div class="bg-box content">
+        <div class="bordered">
+            <div class="box centered">
+                <h1 class="centered">message people here</h1>
+            </div>
+            <div class="flex-row height100 width100">
+                <!--Log in and create account-->
+                <div class="box width100">
+                    <h1>Login to your account</h1>
+                    <p>Don't have an account? Just type a username and password and click "Create Account" to get started!</p>
+                    <p>This is the number 1 place for messaging people, rated by me. Our vast expanse of features will allow you to talk to your fullest potential, which is not much more than before but it's still better.</p>
+                </div>
+                <div class="box">
+                    <form id="loginForm">
+                        <input type="text" id="username" placeholder="Put username here" autocomplete="off" required>
+                        <input type="password" id="password" placeholder="Put password here" autocomplete="off" required>
+                        <div class="flex-row">
+                            <button type="submit" value="login">Login</button>
+                            <button type="submit" value="create">Create Account</button>
+                        </div>
+                    </form>
+                    <p id="error"></p>
+                    <p id="success"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<script src="idxscr.js"></script>

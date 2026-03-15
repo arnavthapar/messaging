@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-store, must-revalidate"/>
+    <meta name="author" content="me">
+    <meta name="description" content="Settings page">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <noscript>You need to enable Javasript for this website to work. Who has that turned off?</noscript>
+    <!--<link rel="icon" type="image/x-icon" href="images/favicon.ico">!-->
+    <title>home</title>
+</head>
+<body>
+    <div class="box">
+        <h1>Welcome, <span id="username"></span>!</h1>
+    </div>
+    <div class="container">
+        <div class="bg-box content flex-column fit-content homeContent">
+            <div>
+                <button class="marginBrem" onclick="window.location.href='/home'" title="Back">Back</button>
+                <form id="groupForm">
+                    <input type="text" id="groupName" autocomplete="off" placeholder="Type a new group name here" required>
+                    <input type="text" id="groupMember1" autocomplete="off" placeholder="Type a username to add to the group" required>
+                    <input type="text" id="groupMember2" autocomplete="off" placeholder="Type a username to add to the group (Optional)">
+                    <input type="text" id="groupMember3" autocomplete="off" placeholder="Type a username to add to the group (Optional)">
+                    <input type="text" id="groupMember4" autocomplete="off" placeholder="Type a username to add to the group (Optional)">
+                    <input type="text" id="groupMember5" autocomplete="off" placeholder="Type a username to add to the group (Optional)">
+                    <input type="text" id="groupMember6" autocomplete="off" placeholder="Type a username to add to the group (Optional)">
+                    <input type="text" id="groupMember7" autocomplete="off" placeholder="Type a username to add to the group (Optional)">
+                    <input type="text" id="groupMember8" autocomplete="off" placeholder="Type a username to add to the group (Optional)">
+                    <input type="text" id="groupMember9" autocomplete="off" placeholder="Type a username to add to the group (Optional)">
+                    <input type="text" id="groupMessage" autocomplete="off" placeholder="Type a message to send to the group upon creation" required>
+                    <button type="submit" value="send">Create</button>
+                </form>
+                <p id="status"></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+<script src="group.js"></script>

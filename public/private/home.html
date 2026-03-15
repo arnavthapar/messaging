@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-store, must-revalidate"/>
+    <meta name="author" content="me">
+    <meta name="description" content="Home page">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <noscript>You need to enable Javasript for this website to work. Who has that turned off?</noscript>
+    <!--<link rel="icon" type="image/x-icon" href="images/favicon.ico">!-->
+    <title>home</title>
+</head>
+<body>
+    <div class="box NMBOT">
+        <h1 class="wrap">Welcome, <span id="username"></span>!</h1>
+    </div>
+    <div class="container">
+        <div class="bg-box flex-column homeContent" id="sidebar">
+            <button id="logoutButton" class="sidebarButton">Log Out</button>
+            <button onclick="location.href='group'" class="sidebarButton">Create Group</button>
+            <button onclick="location.href='settings'" class="sidebarButton">Settings</button>
+        </div>
+        <div class="bg-box content flex-column homeContent" id="messageBGBox">
+            <div id="senderList" class="width100"></div>
+            <div class="flex-row-force">
+                <button id="backButton" class="hidden" onclick="location.href='home'">Back</button>
+                <button id="groupButton" class="hidden groupButton" onclick="location.href='home'">Group Settings</button>
+            </div>
+            <h1 class='wrap-spaces' id="person"></h1>
+            <div id="messages" class="width100-force"></div>
+            <div class="flex-row LRB10Px width96 margin10">
+                <div id="quickMessageSection" class="width96">
+                </div>
+                <p id="messageStatus"></p>
+                <div class="hidden" id="messageNewDiv">
+                    <p class="NM">Message a Specific User</p>
+                    <form id="messageForm">
+                        <input type="text" id="messageInput" autocomplete="off" placeholder="Type a message...">
+                        <input type="text" id="recipientInput" autocomplete="off" placeholder="Recipient username...">
+                        <button type="submit" value="send">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+<script src="home.js"></script>

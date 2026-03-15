@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-store, must-revalidate"/>
+    <meta name="author" content="me">
+    <meta name="description" content="Settings page">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <noscript>You need to enable Javasript for this website to work. Who has that turned off?</noscript>
+    <!--<link rel="icon" type="image/x-icon" href="images/favicon.ico">!-->
+    <title>home</title>
+</head>
+<body>
+    <div class="box">
+        <h1>Welcome, <span id="username"></span>!</h1>
+    </div>
+    <div class="container">
+        <div class="bg-box content flex-column fit-content homeContent">
+            <div>
+                <button class="marginBrem" onclick="window.location.href='/home'" title="Back">Back</button>
+                <form id="renameForm">
+                    <input type="text" id="renameInput" autocomplete="off" placeholder="Rename the group...">
+                    <button type="submit" class="marginBrem">Rename Group</button>
+                </form>
+                <p id="renameStatus"></p>
+                <form id="addForm">
+                    <input type="text" id="addInput" autocomplete="off" placeholder="Add someone to the group...">
+                    <button type="submit" class="marginBrem">Add User</button>
+                </form>
+                <form id="deleteForm">
+                    <input type="text" id="deleteInput" autocomplete="off" placeholder="Remove someone from the group...">
+                    <button type="submit">Remove User</button>
+                </form>
+                <p id="status"></p>
+                <p>Delete Group</p>
+                <form id="deleteGroupForm">
+                    <input type="text" id="deleteGroupInput" autocomplete="off" placeholder="Type your username to confirm.">
+                    <button type="submit">Delete Group</button>
+                </form>
+                <p id="deleteStatus"></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+<script src="group_settings.js"></script>
