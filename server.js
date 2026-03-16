@@ -403,10 +403,7 @@ app.post('/api/send_message', sendLimiter, authMiddleware, async (req, res) => {
         }
         console.log(req.userId);
         console.log(group + "G")
-        if (!Number.isInteger(Number(req.userId))) {
-            return res.status(400).json({ message: 'Invalid ID.' });
-        }
-        if (!Number.isInteger(Number(group))) {
+        if (!Number.isInteger(Number(req.userId)) && !Number.isInteger(Number(group))) {
             return res.status(400).json({ message: 'Invalid ID.' });
         }
         if (group) {
