@@ -352,7 +352,8 @@ app.post('/api/get_messages', authMiddleware, async (req, res) => {
                     id: row.id,
                     content: row.content,
                     sender: row.sender_name,
-                    datetime: userTimeFormat[0].time_format
+                    datetime: userTimeFormat[0].time_format,
+                    date: row.created_at
                 })),
             });
         }
