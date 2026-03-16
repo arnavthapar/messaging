@@ -55,7 +55,7 @@ async function loadMessages() {
                 pval.style.position = 'relative';
                 pval.style.margin = "0px";
                 pval.textContent = message.content;
-                h3.textContent = message.sender + " - " + message.datetime;
+                h3.textContent = message.sender + " - " + row.created_at.toLocaleString(message.datetime, {month: 'numeric', day: 'numeric',  year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
                 h3.classList.add('wrap');
                 wrapper.appendChild(h3);
                 if (message.sender == myUsername) {

@@ -352,7 +352,7 @@ app.post('/api/get_messages', authMiddleware, async (req, res) => {
                     id: row.id,
                     content: row.content,
                     sender: row.sender_name,
-                    datetime: row.created_at.toLocaleString(userTimeFormat[0].time_format, {month: 'numeric', day: 'numeric',  year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
+                    datetime: userTimeFormat[0].time_format
                 })),
             });
         }
