@@ -36,6 +36,7 @@ async function loadMessages() {
                 pval.style.margin = "0px";
                 wrapper.appendChild(pval);
                 pval.textContent = message.content;
+                console.log(message.sender + myUsername + message.sender == myUsername);
                 if (message.sender == myUsername) {
                     let trash = document.createElement('button');
                     trash.textContent = "🗑";
@@ -126,6 +127,7 @@ async function loadUsername() {
     const result = await username.json();
     document.getElementById('username').textContent = result.username;
     cachedUsername = result.username;
+    return result.username;
 }
 if (new URLSearchParams(window.location.search).get('sender') ||
     new URLSearchParams(window.location.search).get('group')) {
