@@ -55,6 +55,7 @@ async function loadMessages() {
                 pval.style.position = 'relative';
                 pval.style.margin = "0px";
                 pval.textContent = message.content;
+                console.log(message.date);
                 h3.textContent = message.sender + " - " + new Date(message.date.replace(' ', 'T')).toLocaleString(message.datetime, {month: 'numeric', day: 'numeric',  year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
                 h3.classList.add('wrap');
                 wrapper.appendChild(h3);
