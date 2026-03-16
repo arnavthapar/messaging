@@ -401,6 +401,7 @@ app.post('/api/send_message', sendLimiter, authMiddleware, async (req, res) => {
         } else if (content.length === 0) {
             return res.status(400).json({ message: 'Message cannot be empty.' });
         }
+        console.log(req.userId + group);
         if (!Number.isInteger(Number(req.userId))) {
             return res.status(400).json({ message: 'Invalid ID.' });
         }
