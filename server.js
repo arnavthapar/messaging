@@ -389,7 +389,7 @@ app.post('/api/get_messages', authMiddleware, async (req, res) => {
         }))});
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Internal server error', nonSQL: true});
     }
 });
 

@@ -19,10 +19,17 @@ document.getElementById('loginForm').onsubmit = async (e) => {
             window.location.href = "/home";
         } else if (res.status === 429) {
             document.getElementById('error').textContent = 'Too many login attempts. Please wait and try again.';
-        } else {
+        } else if (res.status == 403) {
             document.getElementById('error').textContent =
                 'Login failed. Check to make sure the username and password is correct.';
+        } else {
+            const data = res[0].nonSQL;
+            if (data) {
+                document.getElementById('error').textContent = 'An internal server error occured. Try again later.';
+            } else {
+                document.getElementById('error').textContent = 'The database is waking up, try again in a couple of seconds.';
             }
+        }
 
     } else {
         const res = await fetch('/api/create-account', {
