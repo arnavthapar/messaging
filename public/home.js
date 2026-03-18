@@ -62,8 +62,14 @@ async function loadMessages() {
                     let trash = document.createElement('button');
                     trash.textContent = "🗑";
                     trash.id = message.id;
-                    trash.classList = "trash-button redButton";
+                    trash.classList = "trash-button redButton hidden";
                     pval.appendChild(trash);
+                }
+                wrapper.onmouseenter = async (e) => {
+                    document.getElementById(message.id).classList.remove('hidden');
+                }
+                wrapper.onmouseleave = async (e) => {
+                    document.getElementById(message.id).classList.add('hidden');
                 }
                 wrapper.appendChild(pval);
                 document.getElementById('messages').appendChild(wrapper);
