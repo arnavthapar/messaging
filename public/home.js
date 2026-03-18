@@ -143,7 +143,7 @@ async function setupPushNotifications() {
 
     const reg = await navigator.serviceWorker.register('/sw.js');
 
-    const keyRes = await fetch('/api/vapid-public-key', method=POST);
+    const keyRes = await fetch('/api/vapid-public-key');
     const { key } = await keyRes.json();
 
     const subscription = await reg.pushManager.subscribe({
