@@ -142,22 +142,27 @@ async function setupPushNotifications() {
     if (permission !== 'granted') return;
 
     const reg = await navigator.serviceWorker.register('/sw.js');
-    const [publicKeyRows] = await fetch('api/vapid-public-key', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-        }
-    );
+
+    const keyRes = await fetch('/api/vapid-public-key');
+    const { key } = await keyRes.json();
+
     const subscription = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: publicKeyRows[0].key
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key)
     });
 
-    // Send subscription to server
     await fetch('/subscribe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(subscription)
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
     });
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 setupPushNotifications();
 loadSenders();
