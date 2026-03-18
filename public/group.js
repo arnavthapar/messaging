@@ -8,7 +8,9 @@ async function loadUsername() {
     return result.username;
 }
 loadUsername();
-
+document.getElementById('backButton').addEventListener('click', () => {
+    location.href = '/home';
+});
 document.getElementById('groupForm').onsubmit = async (e) => {
     e.preventDefault();
     // Get the clicked submit button
