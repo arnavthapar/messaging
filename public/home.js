@@ -43,6 +43,12 @@ async function loadMessages() {
                     trash.classList = "trash-button redButton";
                     wrapper.appendChild(trash);
                 }
+                wrapper.onmouseenter = async (_) => {
+                    document.getElementById(message.id).classList.remove('hidden');
+                }
+                wrapper.onmouseleave = async (_) => {
+                    document.getElementById(message.id).classList.add('hidden');
+                }
                 prevElement.appendChild(wrapper);
             } else {
                 const wrapper = document.createElement('div');
@@ -65,10 +71,10 @@ async function loadMessages() {
                     trash.classList = "trash-button redButton hidden";
                     pval.appendChild(trash);
                 }
-                wrapper.onmouseenter = async (e) => {
+                wrapper.onmouseenter = async (_) => {
                     document.getElementById(message.id).classList.remove('hidden');
                 }
-                wrapper.onmouseleave = async (e) => {
+                wrapper.onmouseleave = async (_) => {
                     document.getElementById(message.id).classList.add('hidden');
                 }
                 wrapper.appendChild(pval);
