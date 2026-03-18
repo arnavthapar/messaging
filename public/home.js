@@ -40,7 +40,7 @@ async function loadMessages() {
                     let trash = document.createElement('button');
                     trash.textContent = "🗑";
                     trash.id = message.id;
-                    trash.classList = "trash-button redButton";
+                    trash.classList = "trash-button redButton hidden";
                     wrapper.appendChild(trash);
                 }
                 wrapper.onmouseenter = async (_) => {
