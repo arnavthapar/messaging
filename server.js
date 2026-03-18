@@ -8,6 +8,12 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(cors({origin:'https://messaging-production-8499.up.railway.app/'}));
 const PORT = 8080;
+const webpush = require('web-push');
+webpush.setVapidDetails(
+    'https://messaging-production-8499.up.railway.app/',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+);
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const pool = require('./db');
@@ -28,14 +34,6 @@ const subscriber = redis.duplicate();
 subscriber.connect();*/
 const clients = new Map();
 
-function notifyUser(userId, data) {
-    const userClients = clients.get(userId);
-    if (userClients) {
-        for (const res of userClients) {
-            res.write(`data: ${JSON.stringify(data)}\n\n`);
-        }
-    }
-}
 let sessions = {};
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
@@ -156,6 +154,31 @@ async function getId(username) {
     if (rows.length === 0) return null;
     return rows[0].id;
 }
+async function notifyUser(userId, data) {
+    // SS
+    const userClients = clients.get(userId);
+    if (userClients) {
+        for (const res of userClients) {
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        }
+    }
+
+    // web push
+    if (data.sender && data.content) {
+        try {
+            const subscriptions = await getSubscriptionsForUser(userId);
+            for (const sub of subscriptions) {
+                await webpush.sendNotification(sub, JSON.stringify({
+                    title: data.sender,
+                    body: data.content
+                }));
+            }
+        } catch (err) {
+            console.error('Push notification error:', err);
+        }
+    }
+}
+
 function authMiddleware(req, res, next) {
     const sessionId = req.signedCookies.user;
 
@@ -189,7 +212,27 @@ setInterval(() => {
         if (sessions[id].expiresAt < now) delete sessions[id];
     }
 }, 60 * 60 * 1000);
+app.post('/subscribe', authMiddleware, async (req, res) => {
+    try {
+        const subscription = req.body;
+        const userId = req.userId;
+        await pool.query(
+            'INSERT INTO push_subscriptions (user_id, subscription) VALUES (?, ?) ON DUPLICATE KEY UPDATE subscription = ?',
+            [userId, JSON.stringify(subscription), JSON.stringify(subscription)]
+        );
+        res.sendStatus(201);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 
+async function getSubscriptionsForUser(userId) {
+    const [rows] = await pool.query(
+        'SELECT subscription FROM push_subscriptions WHERE user_id = ?', [userId]
+    );
+    return rows.map(r => JSON.parse(r.subscription));
+}
 app.post('/api/create-account', limiterSlow, async (req, res) => {
     const {username, password} = req.body;
     if (!username || !password) {
@@ -221,6 +264,9 @@ app.post('/api/create-account', limiterSlow, async (req, res) => {
         console.error(err);
         res.status(500).json({message: 'Internal server error'});
     }
+});
+app.get('/api/vapid-public-key', (_req, res) => {
+    res.json({ key: process.env.VAPID_PUBLIC_KEY });
 });
 app.post('/api/create_group', authMiddleware, async (req, res) => {
     try {
@@ -534,6 +580,12 @@ app.post('/api/add_group_member', limiter, authMiddleware, async (req, res) => {
     }
     await pool.query('INSERT INTO group_members (group_id, user_id) VALUES (?, ?)', [group, userId]);
     res.json({success:true})
+});
+app.post('/subscribe', express.json(), (req, res) => {
+    const subscription = req.body;
+  // INSERT subscription into DB, tied to the user
+    saveSubscriptionToDB(subscription);
+    res.sendStatus(201);
 });
 app.post('/api/remove_group_member', limiter, authMiddleware, async (req, res) => {
     const {username, group} = req.body;

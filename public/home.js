@@ -135,7 +135,31 @@ if (new URLSearchParams(window.location.search).get('sender') ||
 }
 let cachedUsername = null;
 let currentController = null;
+async function setupPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const [publicKeyRows] = await fetch('api/vapid-public-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        }
+    );
+    const subscription = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: publicKeyRows[0].key
+    });
+
+    // Send subscription to server
+    await fetch('/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(subscription)
+    });
+}
+setupPushNotifications();
 loadSenders();
 loadUsername();
 let limit = 100
