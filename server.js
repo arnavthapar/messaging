@@ -265,7 +265,7 @@ app.post('/api/create-account', limiterSlow, async (req, res) => {
         res.status(500).json({message: 'Internal server error'});
     }
 });
-app.get('/api/vapid-public-key', (_req, res) => {
+app.post('/api/vapid-public-key', (_req, res) => {
     res.json({ key: process.env.VAPID_PUBLIC_KEY });
 });
 app.post('/api/create_group', authMiddleware, async (req, res) => {
