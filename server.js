@@ -49,17 +49,17 @@ app.use(helmet({
 }));
 const limiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 10, // 10 attempts per window
+    max: 100, // 10 attempts per window
     message: { message: 'Too many attempts, try again later.' }
 });
 
 const limiterSlow = rateLimit({
     windowMs: 3 * 60 * 1000, // 3 minutes
-    max: 15, // 15 attempts per window
+    max: 60, // 60 attempts per window
     message: { message: 'Too many attempts, try again later.' }
 });
 const sendLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
+    windowMs: 60 * 1000, // 1 minute
     max: 60, // 60 attempts per window
     message: { message: 'Too many messages sent, try again later.' }
 });
