@@ -33,7 +33,20 @@ redis.connect();
 const subscriber = redis.duplicate();
 subscriber.connect();*/
 const clients = new Map();
-
+async function queryWithRetry(sql, params, retries = 5, delay = 2000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await queryWithRetry(sql, params);
+        } catch (err) {
+            if ((err.code === 'ETIMEDOUT' || err.code === 'ECONNREFUSED') && i < retries - 1) {
+                console.log(`DB connection failed, retrying in ${delay}ms... (${i + 1}/${retries})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            } else {
+                throw err;
+            }
+        }
+    }
+}
 let sessions = {};
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
@@ -49,7 +62,7 @@ app.use(helmet({
 }));
 const limiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 100, // 10 attempts per window
+    max: 100, // 100 attempts per window
     message: { message: 'Too many attempts, try again later.' }
 });
 
@@ -150,7 +163,7 @@ group_messages
 +------------+-----------------+------+-----+-------------------+-------------------+
 */
 async function getId(username) {
-    const [rows] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
+    const [rows] = await queryWithRetry('SELECT id FROM users WHERE username = ?', [username]);
     if (rows.length === 0) return null;
     return rows[0].id;
 }
@@ -198,7 +211,7 @@ function authMiddleware(req, res, next) {
     next();
 }
 async function checkUsername(username) {
-    const [rows] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
+    const [rows] = await queryWithRetry('SELECT id FROM users WHERE username = ?', [username]);
     if (rows.length > 0) {
         return true
     }
@@ -216,7 +229,7 @@ app.post('/subscribe', authMiddleware, async (req, res) => {
     try {
         const subscription = req.body;
         const userId = req.userId;
-        await pool.query(
+        await queryWithRetry(
             'INSERT INTO push_subscriptions (user_id, subscription) VALUES (?, ?) ON DUPLICATE KEY UPDATE subscription = ?',
             [userId, JSON.stringify(subscription), JSON.stringify(subscription)]
         );
@@ -228,7 +241,7 @@ app.post('/subscribe', authMiddleware, async (req, res) => {
 });
 
 async function getSubscriptionsForUser(userId) {
-    const [rows] = await pool.query(
+    const [rows] = await queryWithRetry(
         'SELECT subscription FROM push_subscriptions WHERE user_id = ?', [userId]
     );
     return rows.map(r => JSON.parse(r.subscription));
@@ -249,7 +262,7 @@ app.post('/api/create-account', limiterSlow, async (req, res) => {
     }
     try {
         // Check if username already exists
-        const [rows] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
+        const [rows] = await queryWithRetry('SELECT id FROM users WHERE username = ?', [username]);
         if (rows.length > 0) {
             return res.status(409).json({message: 'Username already exists'});
         }
@@ -257,7 +270,7 @@ app.post('/api/create-account', limiterSlow, async (req, res) => {
         const password_hash = await bcrypt.hash(password, saltRounds);
 
         // Insert user
-        await pool.query('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, password_hash]);
+        await queryWithRetry('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, password_hash]);
 
         res.json({success: true});
     } catch (err) {
@@ -278,17 +291,17 @@ app.post('/api/create_group', authMiddleware, async (req, res) => {
         } else if (name.length > 50) {
             return res.status(413).json({message: 'Group name cannot exceed 50 characters.'});
         }
-        const [rows] = await pool.query('INSERT INTO chat_groups (name, owner_id) VALUES (?, ?)', [name, req.userId]);
+        const [rows] = await queryWithRetry('INSERT INTO chat_groups (name, owner_id) VALUES (?, ?)', [name, req.userId]);
         const groupId = rows.insertId;
-        await pool.query('INSERT IGNORE INTO group_members (group_id, user_id) VALUES (?, ?)', [groupId, req.userId]);
+        await queryWithRetry('INSERT IGNORE INTO group_members (group_id, user_id) VALUES (?, ?)', [groupId, req.userId]);
         for (const member of members) {
             const memberId = await getId(member);
             if (memberId) {
-                await pool.query('INSERT IGNORE INTO group_members (group_id, user_id) VALUES (?, ?)', [groupId, memberId]);
+                await queryWithRetry('INSERT IGNORE INTO group_members (group_id, user_id) VALUES (?, ?)', [groupId, memberId]);
             }
         }
         if (message && message.length > 0) {
-        await pool.query(
+        await queryWithRetry(
             'INSERT INTO group_messages (group_id, sender, content) VALUES (?, ?, ?)',
             [groupId, req.userId, message]
         );
@@ -304,10 +317,10 @@ app.post('/api/delete_account', authMiddleware, async (req, res) => {
     try {
         const userId = req.userId;
         const sessionId = req.signedCookies.user;
-        await pool.query('DELETE FROM users WHERE id = ?', [userId]);
-        await pool.query('DELETE FROM dms WHERE sender = ? OR reciever = ?', [userId, userId]);
-        await pool.query('DELETE FROM group_members WHERE user_id = ?', [userId]);
-        await pool.query('DELETE FROM chat_groups WHERE owner_id = ?', [userId]);
+        await queryWithRetry('DELETE FROM users WHERE id = ?', [userId]);
+        await queryWithRetry('DELETE FROM dms WHERE sender = ? OR reciever = ?', [userId, userId]);
+        await queryWithRetry('DELETE FROM group_members WHERE user_id = ?', [userId]);
+        await queryWithRetry('DELETE FROM chat_groups WHERE owner_id = ?', [userId]);
         delete sessions[sessionId];
         res.json({ success: true });
     } catch (err) {
@@ -319,7 +332,7 @@ app.post('/api/get_senders', authMiddleware, async (req, res) => {
     try {
         const myId = req.userId;
 
-        const [dmRows] = await pool.query(
+        const [dmRows] = await queryWithRetry(
             `SELECT DISTINCT u.username AS person, 'dm' AS type, NULL AS id FROM dms
             JOIN users u ON u.id = dms.sender
             WHERE dms.reciever = ?
@@ -330,7 +343,7 @@ app.post('/api/get_senders', authMiddleware, async (req, res) => {
             [myId, myId]
         );
 
-        const [groupRows] = await pool.query(
+        const [groupRows] = await queryWithRetry(
             `SELECT cg.name AS person, 'group' AS type, cg.id AS id
             FROM chat_groups cg
             JOIN group_members gm ON gm.group_id = cg.id
@@ -363,12 +376,12 @@ app.post('/api/get_messages', authMiddleware, async (req, res) => {
             }
             // Check user is actually in the group
             const [[groupInfo], [userTimeFormat], [groupUsers], [membership]] = await Promise.all([
-                pool.query('SELECT name FROM chat_groups WHERE id = ?', [req.body.group]),
-                pool.query('SELECT time_format FROM users WHERE id = ?', [myId]),
-                pool.query(`SELECT u.username FROM users u
+                queryWithRetry('SELECT name FROM chat_groups WHERE id = ?', [req.body.group]),
+                queryWithRetry('SELECT time_format FROM users WHERE id = ?', [myId]),
+                queryWithRetry(`SELECT u.username FROM users u
                             JOIN group_members gm ON gm.user_id = u.id
                             WHERE gm.group_id = ?`, [req.body.group]),
-                pool.query('SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?',
+                queryWithRetry('SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?',
                             [req.body.group, myId])
             ]);
 
@@ -376,7 +389,7 @@ app.post('/api/get_messages', authMiddleware, async (req, res) => {
                 return res.status(403).json({ message: 'You are not in this group.' });
             }
 
-            const [rows] = await pool.query(
+            const [rows] = await queryWithRetry(
                 `SELECT * FROM (
                     SELECT gm_msgs.*, u.username as sender_name FROM group_messages gm_msgs
                     JOIN users u ON u.id = gm_msgs.sender
@@ -409,7 +422,7 @@ app.post('/api/get_messages', authMiddleware, async (req, res) => {
         if (!otherId) {
             return res.status(400).json({ message: 'User not found.' });
         }
-        const [rows] = await pool.query(
+        const [rows] = await queryWithRetry(
             `SELECT * FROM (
                 SELECT dms.*, u.username as sender_name, u.time_format FROM dms
                 JOIN users u ON u.id = dms.sender
@@ -423,7 +436,7 @@ app.post('/api/get_messages', authMiddleware, async (req, res) => {
             let extra = true;
             rows.shift();
         }
-        const [userTimeFormat] = await pool.query('SELECT time_format, hour_format FROM users WHERE id = ?', [myId]);
+        const [userTimeFormat] = await queryWithRetry('SELECT time_format, hour_format FROM users WHERE id = ?', [myId]);
         res.json({
             extra:extra,
             messages: rows.map(row => ({
@@ -453,18 +466,18 @@ app.post('/api/send_message', sendLimiter, authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Invalid ID.' });
         }
         if (group) {
-            const [membership] = await pool.query(
+            const [membership] = await queryWithRetry(
                 'SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?',
                 [group, req.userId]
             );
             if (membership.length === 0) {
                 return res.status(403).json({ message: 'You are not in this group.' });
             }
-            await pool.query(
+            await queryWithRetry(
                 'INSERT INTO group_messages (group_id, sender, content) VALUES (?, ?, ?)',
                 [group, req.userId, content]
             );
-            const [groupMembers] = await pool.query('SELECT user_id FROM group_members WHERE group_id = ?', [group]);
+            const [groupMembers] = await queryWithRetry('SELECT user_id FROM group_members WHERE group_id = ?', [group]);
             for (const member of groupMembers) {
                 //await redis.publish(`messages:${member.user_id}`, JSON.stringify({ content, sender: req.username }));
                 notifyUser(member.user_id, { content, sender: req.username });
@@ -484,7 +497,7 @@ app.post('/api/send_message', sendLimiter, authMiddleware, async (req, res) => {
         if (!recipientId) {
             return res.status(400).json({ message: 'Recipient does not exist.' });
         }
-        await pool.query(
+        await queryWithRetry(
             'INSERT INTO dms (sender, reciever, content) VALUES (?, ?, ?)',
             [req.userId, recipientId, content]
         );
@@ -509,25 +522,25 @@ app.post('/api/delete_message', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Invalid ID.' });
         }
         if (req.body.dm) {
-            const [dmRows] = await pool.query('SELECT sender, reciever FROM dms WHERE id = ?', [id]);
+            const [dmRows] = await queryWithRetry('SELECT sender, reciever FROM dms WHERE id = ?', [id]);
             if (dmRows.length > 0) {
                 if (dmRows[0].sender != userId) {
                     return res.status(403).json({ message: 'You cannot delete this message.' });
                 }
-                await pool.query('DELETE FROM dms WHERE id = ? AND sender = ?', [id, userId]);
+                await queryWithRetry('DELETE FROM dms WHERE id = ? AND sender = ?', [id, userId]);
                 notifyUser(dmRows[0].reciever, { deleted: true });
                 //await redis.publish(`messages:${dmRows[0].reciever}`, JSON.stringify({ deleted: true }));
                 return res.json({ success: true });
             }
 
         } else {
-            const [groupRows] = await pool.query('SELECT sender, group_id FROM group_messages WHERE id = ?', [id]);
+            const [groupRows] = await queryWithRetry('SELECT sender, group_id FROM group_messages WHERE id = ?', [id]);
             if (groupRows.length > 0) {
                 if (groupRows[0].sender != userId) {
                     return res.status(403).json({ message: 'You cannot delete this message.' });
                 }
-                await pool.query('DELETE FROM group_messages WHERE id = ? AND sender = ?', [id, userId]);
-                const [groupMembers] = await pool.query('SELECT user_id FROM group_members WHERE group_id = ?', [groupRows[0].group_id]);
+                await queryWithRetry('DELETE FROM group_messages WHERE id = ? AND sender = ?', [id, userId]);
+                const [groupMembers] = await queryWithRetry('SELECT user_id FROM group_members WHERE group_id = ?', [groupRows[0].group_id]);
                 for (const member of groupMembers) {
                     notifyUser(member.user_id, { deleted: true });
                     //await redis.publish(`messages:${member.user_id}`, JSON.stringify({ deleted: true }));
@@ -553,7 +566,7 @@ app.post('/api/change_username', limiterSlow, authMiddleware, async (req, res) =
         } else if (await checkUsername(req.body.username)) {
             return res.status(400).json({message: 'Username is taken.'});
         }
-        await pool.query('UPDATE users SET username = ? WHERE id = ?', [req.body.username, req.userId]);
+        await queryWithRetry('UPDATE users SET username = ? WHERE id = ?', [req.body.username, req.userId]);
         sessions[req.signedCookies.user].username = req.body.username;
         res.json({success: true});
     } catch (err) {
@@ -566,19 +579,19 @@ app.post('/api/add_group_member', limiter, authMiddleware, async (req, res) => {
     if (!username || !group){
         return res.status(400).json({message: 'Username and group are required.'});
     }
-    const [membership] = await pool.query('SELECT owner_id FROM chat_groups WHERE id = ?', [group]);
+    const [membership] = await queryWithRetry('SELECT owner_id FROM chat_groups WHERE id = ?', [group]);
     if (membership[0].owner_id != sessions[req.signedCookies.user].userId) {
         return res.status(403).json({ message: 'You are not the owner in this group.' });
     }
     userId = await getId(username);
-    const [membership2] = await pool.query(
+    const [membership2] = await queryWithRetry(
     'SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?',
         [group, userId]
     );
     if (membership2.length !== 0) {
         return res.status(400).json({ message: 'That user is already in this group.' });
     }
-    await pool.query('INSERT INTO group_members (group_id, user_id) VALUES (?, ?)', [group, userId]);
+    await queryWithRetry('INSERT INTO group_members (group_id, user_id) VALUES (?, ?)', [group, userId]);
     res.json({success:true})
 });
 app.post('/subscribe', express.json(), (req, res) => {
@@ -592,19 +605,19 @@ app.post('/api/remove_group_member', limiter, authMiddleware, async (req, res) =
     if (!username || !group){
         return res.status(400).json({message: 'Username and group are required.'});
     }
-    const [membership] = await pool.query('SELECT owner_id FROM chat_groups WHERE id = ?', [group]);
+    const [membership] = await queryWithRetry('SELECT owner_id FROM chat_groups WHERE id = ?', [group]);
     if (membership[0].owner_id != sessions[req.signedCookies.user].userId) {
         return res.status(403).json({ message: 'You are not the owner in this group.' });
     }
     userId = await getId(username);
-    const [membership2] = await pool.query(
+    const [membership2] = await queryWithRetry(
     'SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?',
         [group, userId]
     );
     if (membership2.length === 0) {
         return res.status(400).json({ message: 'That user is not in this group.' });
     }
-    await pool.query(
+    await queryWithRetry(
         'DELETE FROM group_members WHERE user_id = ? AND group_id = ?', [userId, group]
     )
     res.json({success:true})
@@ -614,17 +627,17 @@ app.post('/api/delete_group', limiter, authMiddleware, async (req, res) => {
     if (!group){
         return res.status(400).json({message: 'Group id is required.'});
     }
-    const [membership] = await pool.query('SELECT owner_id FROM chat_groups WHERE id = ?', [group]);
+    const [membership] = await queryWithRetry('SELECT owner_id FROM chat_groups WHERE id = ?', [group]);
     if (membership[0].owner_id != sessions[req.signedCookies.user].userId) {
         return res.status(403).json({ message: 'You are not the owner in this group.' });
     }
-    await pool.query(
+    await queryWithRetry(
         'DELETE FROM group_members WHERE group_id = ?', [group]
     )
-    await pool.query(
+    await queryWithRetry(
         'DELETE FROM chat_groups WHERE id = ?', [group]
     )
-    await pool.query(
+    await queryWithRetry(
         'DELETE FROM group_messages WHERE group_id = ?', [group]
     )
     res.json({success:true})
@@ -640,11 +653,11 @@ app.post('/api/rename_group', limiter, authMiddleware, async (req, res) => {
     if (name.length < 3) {
         return res.status(400).json({message: 'Name must be more than 3 characters.'})
     }
-    const [membership] = await pool.query('SELECT 1 FROM group_members WHERE user_id = ? AND group_id = ?', [sessions[req.signedCookies.user].userId, group]);
+    const [membership] = await queryWithRetry('SELECT 1 FROM group_members WHERE user_id = ? AND group_id = ?', [sessions[req.signedCookies.user].userId, group]);
     if (membership.length == 0) {
         return res.status(403).json({ message: 'You are not in this group.' });
     }
-    await pool.query('UPDATE chat_groups SET name=?', [name])
+    await queryWithRetry('UPDATE chat_groups SET name=?', [name])
     res.json({success:true})
 });
 app.post('/api/login', limiter, async (req, res) => {
@@ -653,7 +666,7 @@ app.post('/api/login', limiter, async (req, res) => {
         return res.status(400).json({message: 'Username and password are required.'});
     }
     try {
-        const [rows] = await pool.query('SELECT id, password_hash FROM users WHERE username = ?', [username]);
+        const [rows] = await queryWithRetry('SELECT id, password_hash FROM users WHERE username = ?', [username]);
         if (rows.length === 0) {
             return res.status(401).json({message: 'Invalid username'});
         }
@@ -687,11 +700,11 @@ app.post('/api/login', limiter, async (req, res) => {
 app.post('/api/change_time_format', authMiddleware, async (req, res) => {
     try {
         const id = req.userId;
-        const [rows] = await pool.query('SELECT time_format FROM users WHERE id = ?', [id]);
+        const [rows] = await queryWithRetry('SELECT time_format FROM users WHERE id = ?', [id]);
         if (rows[0].time_format == "en-US") {
-            await pool.query('UPDATE users SET time_format="en-GB" WHERE id = ?;', [id])
+            await queryWithRetry('UPDATE users SET time_format="en-GB" WHERE id = ?;', [id])
         } else {
-            await pool.query('UPDATE users SET time_format="en-US" WHERE id = ?;', [id])
+            await queryWithRetry('UPDATE users SET time_format="en-US" WHERE id = ?;', [id])
         }
         res.json({success:true});
     } catch (err) {
@@ -702,8 +715,8 @@ app.post('/api/change_time_format', authMiddleware, async (req, res) => {
 app.post('/api/change_hour_format', authMiddleware, async (req, res) => {
     try {
         const id = req.userId;
-        const [rows] = await pool.query('SELECT hour_format FROM users WHERE id = ?', [id]);
-        await pool.query('UPDATE users SET hour_format = ? WHERE id = ?;', [1-rows[0].hour_format, id]);
+        const [rows] = await queryWithRetry('SELECT hour_format FROM users WHERE id = ?', [id]);
+        await queryWithRetry('UPDATE users SET hour_format = ? WHERE id = ?;', [1-rows[0].hour_format, id]);
         res.json({success:true});
     } catch (err) {
         console.error(err);
