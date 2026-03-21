@@ -773,6 +773,26 @@ app.use((_req, res, _next) => {
     res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+async function waitForDB(retries = 10, delay = 3000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            await pool.query('SELECT 1');
+            console.log('DB connected');
+            return;
+        } catch (err) {
+            console.log(`Waiting for DB... (${i + 1}/${retries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    throw new Error('Could not connect to DB after retries');
+}
+
+// call it before starting the server
+waitForDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
+}).catch(err => {
+    console.error('Failed to connect to DB:', err);
+    process.exit(1);
 });
