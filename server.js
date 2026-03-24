@@ -217,7 +217,7 @@ app.post('/subscribe', authMiddleware, async (req, res) => {
         const subscription = req.body;
         const userId = req.userId;
         await pool.query(
-            'INSERT INTO push_subscriptions (user_id, subscription) VALUES (?, ?) ON DUPLICATE KEY UPDATE subscription = ?',
+            'INSERT IGNORE INTO push_subscriptions (user_id, subscription) VALUES (?, ?) ON DUPLICATE KEY UPDATE subscription = ?',
             [userId, JSON.stringify(subscription), JSON.stringify(subscription)]
         );
         res.sendStatus(201);
