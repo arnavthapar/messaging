@@ -777,7 +777,7 @@ async function waitForDB(retries = 10, delay = 3000) {
 // call it before starting the server
 waitForDB().then(() => {
     app.listen(PORT, () => {
-        console.log(`Server running on http://localhost:${PORT}`);
+        console.log(`Server running on https://messaging-production-8499.up.railway.app/`);
     });
 }).catch(err => {
     console.error('Failed to connect to DB:', err);

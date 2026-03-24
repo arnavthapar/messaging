@@ -19,7 +19,7 @@ document.getElementById('loginForm').onsubmit = async (e) => {
             window.location.href = "/home";
         } else if (res.status === 429) {
             document.getElementById('error').textContent = 'Too many login attempts. Please wait and try again.';
-        } else if (res.status == 403) {
+        } else if (res.status == 403 || res.status == 401) {
             document.getElementById('error').textContent =
                 'Login failed. Check to make sure the username and password is correct.';
         } else {
